@@ -1,0 +1,26 @@
+name: ☁️ 云端脚本执行器
+
+# 触发方式：允许手动点击运行，或者代码更新时自动运行
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest  # 使用 GitHub 的免费 Linux 服务器
+
+    steps:
+      # 1. 下载你的代码
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      # 2. 运行你的脚本
+      - name: 🚀 执行云更新脚本
+        run: |
+          # 给脚本执行权限
+          chmod +x 云更新.sh
+          
+          # 执行脚本
+          # 注意：这里只是演示运行脚本，因为没有服务器，它只能在GitHub的临时环境里跑
+          ./云更新.sh
