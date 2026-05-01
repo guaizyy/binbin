@@ -1,4 +1,5 @@
 #!/system/bin/sh
+start_ui
 # ======下载云端配置 ===========
 CONFIG_URL="https://gist.githubusercontent.com/guaizyy/13bc149b77a97b0c4d046fd9ef4a9889/raw/79801c5fbb4bdfe880754bfbecec9eed835860c9/game_list.conf"
 #===============================
@@ -7,14 +8,27 @@ start_ui() {
     echo "======================================"
     echo "        🚀 云更新系统启动中..."
     echo "======================================"
-    for i in 1 2 3; do
-        echo "加载模块 $i..."
-        sleep 0.3
+
+    bar=""
+    for i in $(seq 1 20); do
+        bar="${bar}#"
+        printf "\r加载中: [%-20s] %d%%" "$bar" "$((i*5))"
+        sleep 0.05
     done
+    echo ""
+}
+SECRET_KEY="guaizyy"
+
+check_auth() {
+    txt="$1"
+    echo "$txt" | grep -q "KEY=$SECRET_KEY" || {
+        echo "❌ 非官方更新源"
+        exit 1
+    }
 }
 # ===================== 云端更新配置（只需要这里设置一次） =====================
 # 本地版本自动从脚本自身读取，不再需要手动修改
-NOTICE_URL="https://gist.githubusercontent.com/guaizyy/0aab0f1c839678f85171aff7b3238c91/raw/25f2fa70d4a8f65f98aae804cfd128325e65bfbd/%E5%85%AC%E5%91%8A.txt"
+NOTICE_URL="https://raw.githubusercontent.com/guaizyy/binbin/refs/heads/main/云更新.sh"
 
 # ===================== 工具函数 =====================
 # 版本比较（必须在最前）
@@ -75,7 +89,12 @@ check_update_now() {
     echo "本地版本：$local_ver"
 
     txt=$(get_raw "$NOTICE_URL")
-
+# 判断是不是正常文本
+echo "$txt" | grep -q "VERSION=" || {
+    echo "❌ 公告格式错误或地址错误"
+    read
+    return
+}
     if [ -z "$txt" ]; then
         echo "❌ 获取公告失败"
         read
@@ -96,28 +115,22 @@ check_update_now() {
         read -n1 ans
 
         if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
-echo ""
-for i in 10 30 60 80 100; do
-    printf "\r📦 更新进度: %s%%" "$i"
-    sleep 0.2
-done
-echo ""
+            echo -e "\n🔽 下载中..."
 
             tmp_file="/data/local/tmp/update.sh"
             get_raw "$remote_url" > "$tmp_file"
 
-# ===== MD5校验开始 =====
-if [ -n "$remote_md5" ]; then
-    local_md5=$(md5sum "$tmp_file" | awk '{print $1}')
-
-    if [ "$local_md5" != "$remote_md5" ]; then
-        echo "❌ 校验失败！文件被篡改"
-        rm -f "$tmp_file"
-        read
-        return
-    fi
-fi
-# ===== MD5校验结束 =====
+            # ✅ MD5 校验（可选但强烈建议）
+            if [ -n "$remote_md5" ]; then
+            remote_md5=$(echo "$txt" | grep "^MD5=" | cut -d= -f2)
+                local_md5=$(md5sum "$tmp_file" | awk '{print $1}')
+                if [ "$local_md5" != "$remote_md5" ]; then
+                    echo "❌ 校验失败，可能被篡改！"
+                    rm -f "$tmp_file"
+                    read
+                    return
+                fi
+            fi
 
             chmod +x "$tmp_file"
             cp "$tmp_file" "$0"
@@ -605,4 +618,8 @@ fi
 
 
 # 这里只需要在脚本发布时写一次，以后更新不用改！
+VERSION="1.1"
+URL="https://raw.githubusercontent.com/xxx/云更新.sh"
+MD5="41a2b6c3b01d29fdc87239ca4262f026"
+MSG="1.更新云配置"
 LOCAL_VER="1.0"
