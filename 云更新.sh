@@ -1,10 +1,26 @@
 #!/system/bin/sh
-
+# ======下载云端配置 ===========
+CONFIG_URL="https://gist.githubusercontent.com/guaizyy/13bc149b77a97b0c4d046fd9ef4a9889/raw/79801c5fbb4bdfe880754bfbecec9eed835860c9/game_list.conf"
+#===============================
+start_ui() {
+    clear
+    echo "======================================"
+    echo "        🚀 云更新系统启动中..."
+    echo "======================================"
+    for i in 1 2 3; do
+        echo "加载模块 $i..."
+        sleep 0.3
+    done
+}
 # ===================== 云端更新配置（只需要这里设置一次） =====================
 # 本地版本自动从脚本自身读取，不再需要手动修改
 NOTICE_URL="https://gist.githubusercontent.com/guaizyy/0aab0f1c839678f85171aff7b3238c91/raw/25f2fa70d4a8f65f98aae804cfd128325e65bfbd/%E5%85%AC%E5%91%8A.txt"
 
 # ===================== 工具函数 =====================
+# 版本比较（必须在最前）
+version_gt() {
+    [ "$(echo -e "$1\n$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)" = "$1" ] && [ "$1" != "$2" ]
+}
 # 1. 获取本地版本号（自动从脚本里读，不用手动改）
 get_local_version() {
     grep "^LOCAL_VER=" "$0" | head -n1 | cut -d= -f2 | tr -d '"'
@@ -30,6 +46,22 @@ auto_check_update() {
             rm -f /data/local/tmp/ver_new 2>/dev/null
         fi
     ) &
+}
+
+# 云同步配置
+sync_game_list() {
+    echo "☁️ 正在同步配置..."
+
+    cfg=$(get_raw "$CONFIG_URL")
+
+    if [ -z "$cfg" ]; then
+        echo "❌ 同步失败"
+        return
+    fi
+
+    echo "$cfg" > "$GAME_LIST_FILE"
+
+    echo "✅ 同步完成"
 }
 
 # 4. 手动检查更新菜单
@@ -64,21 +96,28 @@ check_update_now() {
         read -n1 ans
 
         if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
-            echo -e "\n🔽 下载中..."
+echo ""
+for i in 10 30 60 80 100; do
+    printf "\r📦 更新进度: %s%%" "$i"
+    sleep 0.2
+done
+echo ""
 
             tmp_file="/data/local/tmp/update.sh"
             get_raw "$remote_url" > "$tmp_file"
 
-            # ✅ MD5 校验（可选但强烈建议）
-            if [ -n "$remote_md5" ]; then
-                local_md5=$(md5sum "$tmp_file" | awk '{print $1}')
-                if [ "$local_md5" != "$remote_md5" ]; then
-                    echo "❌ 校验失败，可能被篡改！"
-                    rm -f "$tmp_file"
-                    read
-                    return
-                fi
-            fi
+# ===== MD5校验开始 =====
+if [ -n "$remote_md5" ]; then
+    local_md5=$(md5sum "$tmp_file" | awk '{print $1}')
+
+    if [ "$local_md5" != "$remote_md5" ]; then
+        echo "❌ 校验失败！文件被篡改"
+        rm -f "$tmp_file"
+        read
+        return
+    fi
+fi
+# ===== MD5校验结束 =====
 
             chmod +x "$tmp_file"
             cp "$tmp_file" "$0"
@@ -172,7 +211,7 @@ if [ "$CONFIG" = "0" ]; then
     while true; do
         clear
         echo "========================================"
-        echo "           ⚙️  修改主菜单 ⚙️            "
+        echo "⚙️ 修改主菜单 $(date +%H:%M:%S)"
         local_ver=$(get_local_version)
         echo "           版本：$local_ver"
         [ -f /data/local/tmp/ver_new ] && echo "      🔴 有新版本：$(cat /data/local/tmp/ver_new)"
@@ -183,6 +222,7 @@ if [ "$CONFIG" = "0" ]; then
         echo " 4. 删除游戏"
         echo " 5. 切换正常模式"
         echo " 6. 检查更新"
+        echo " 7. 同步云配置"
         echo " 0. 退出"
         echo "========================================"
         echo -n "请选择: "
@@ -478,7 +518,12 @@ if [ "$CONFIG" = "0" ]; then
             6)
                 check_update_now
                 ;;
-
+            7)
+                sync_game_list
+                echo "同步配置成功"
+                echo "按回车返回"
+                read dummy
+                ;;
             0)
                 echo "❌主程序退出❌"
                 exit 0
