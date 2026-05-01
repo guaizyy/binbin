@@ -101,10 +101,10 @@ echo "$txt" | grep -q "VERSION=" || {
         return
     fi
 
-    remote_ver=$(echo "$txt" | grep "^VERSION=" | cut -d= -f2)
-    remote_url=$(echo "$txt" | grep "^URL=" | cut -d= -f2)
-    remote_msg=$(echo "$txt" | grep "^MSG=" | cut -d= -f2- | sed 's/\\n/\n/g')
-    remote_md5=$(echo "$txt" | grep "^MD5=" | cut -d= -f2)
+remote_ver=$(echo "$txt" | grep "^VERSION=" | cut -d= -f2 | tr -d '"')
+remote_url=$(echo "$txt" | grep "^URL=" | cut -d= -f2 | tr -d '"')
+remote_msg=$(echo "$txt" | grep "^MSG=" | cut -d= -f2- | tr -d '"' | sed 's/\\n/\n/g')
+remote_md5=$(echo "$txt" | grep "^MD5=" | cut -d= -f2 | tr -d '"')
 
     echo "云端版本：$remote_ver"
     echo -e "\n📢 更新公告："
